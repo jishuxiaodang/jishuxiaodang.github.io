@@ -1,0 +1,244 @@
+<!DOCTYPE html><html lang="zh-CN" data-theme="light"><head><meta charset="UTF-8"><meta http-equiv="X-UA-Compatible" content="IE=edge"><meta name="viewport" content="width=device-width,initial-scale=1"><title>Redis复制 | 技术小党</title><meta name="keywords" content="Redis"><meta name="author" content="王英杰"><meta name="copyright" content="王英杰"><meta name="format-detection" content="telephone=no"><meta name="theme-color" content="#ffffff"><meta http-equiv="Cache-Control" content="no-transform"><meta http-equiv="Cache-Control" content="no-siteapp"><meta name="description" content="Redis的主从结构">
+<meta property="og:type" content="article">
+<meta property="og:title" content="Redis复制">
+<meta property="og:url" content="http://bugjie.com/2021/02/03/redis/Redis%E5%A4%8D%E5%88%B6/index.html">
+<meta property="og:site_name" content="技术小党">
+<meta property="og:description" content="Redis的主从结构">
+<meta property="og:locale" content="zh_CN">
+<meta property="og:image" content="https://gitee.com/JiShuXiaoDang/Image/raw/master/hexo/%E9%BA%A6%E8%8A%92.jpg">
+<meta property="article:published_time" content="2021-02-03T14:34:43.000Z">
+<meta property="article:modified_time" content="2021-03-02T15:27:04.226Z">
+<meta property="article:author" content="王英杰">
+<meta property="article:tag" content="Redis主从结构">
+<meta name="twitter:card" content="summary">
+<meta name="twitter:image" content="https://gitee.com/JiShuXiaoDang/Image/raw/master/hexo/%E9%BA%A6%E8%8A%92.jpg"><link rel="shortcut icon" href="https://gitee.com/JiShuXiaoDang/Image/raw/master/hexo/%E7%8C%ABicon.png"><link rel="canonical" href="http://bugjie.com/2021/02/03/redis/Redis%E5%A4%8D%E5%88%B6/"><link rel="preconnect" href="//cdn.jsdelivr.net"/><link rel="stylesheet" href="/css/index.css"><link rel="stylesheet" href="https://cdn.jsdelivr.net/npm/@fortawesome/fontawesome-free/css/all.min.css"><link rel="stylesheet" href="https://cdn.jsdelivr.net/npm/@fancyapps/fancybox@latest/dist/jquery.fancybox.min.css"><script>var GLOBAL_CONFIG = { 
+  root: '/',
+  algolia: undefined,
+  localSearch: undefined,
+  translate: undefined,
+  noticeOutdate: undefined,
+  highlight: {"plugin":"highlighjs","highlightCopy":true,"highlightLang":true},
+  copy: {
+    success: '复制成功',
+    error: '复制错误',
+    noSupport: '浏览器不支持'
+  },
+  relativeDate: {
+    homepage: false,
+    post: false
+  },
+  runtime: '',
+  date_suffix: {
+    just: '刚刚',
+    min: '分钟前',
+    hour: '小时前',
+    day: '天前',
+    month: '个月前'
+  },
+  copyright: undefined,
+  ClickShowText: undefined,
+  lightbox: 'fancybox',
+  Snackbar: undefined,
+  justifiedGallery: {
+    js: 'https://cdn.jsdelivr.net/npm/justifiedGallery/dist/js/jquery.justifiedGallery.min.js',
+    css: 'https://cdn.jsdelivr.net/npm/justifiedGallery/dist/css/justifiedGallery.min.css'
+  },
+  isPhotoFigcaption: false,
+  islazyload: false,
+  isanchor: false
+};
+
+var saveToLocal = {
+  set: function setWithExpiry(key, value, ttl) {
+    const now = new Date()
+    const expiryDay = ttl * 86400000
+    const item = {
+      value: value,
+      expiry: now.getTime() + expiryDay,
+    }
+    localStorage.setItem(key, JSON.stringify(item))
+  },
+
+  get: function getWithExpiry(key) {
+    const itemStr = localStorage.getItem(key)
+
+    if (!itemStr) {
+      return undefined
+    }
+    const item = JSON.parse(itemStr)
+    const now = new Date()
+
+    if (now.getTime() > item.expiry) {
+      localStorage.removeItem(key)
+      return undefined
+    }
+    return item.value
+  }
+}</script><script id="config_change">var GLOBAL_CONFIG_SITE = { 
+  isPost: true,
+  isHome: false,
+  isHighlightShrink: false,
+  isToc: true,
+  postUpdate: '2021-03-02 23:27:04'
+}</script><noscript><style type="text/css">
+  #nav {
+    opacity: 1
+  }
+  .justified-gallery img {
+    opacity: 1
+  }
+
+  #recent-posts time,
+  #post-meta time {
+    display: inline !important
+  }
+</style></noscript><script>(function () {  window.activateDarkMode = function () {
+    document.documentElement.setAttribute('data-theme', 'dark')
+    if (document.querySelector('meta[name="theme-color"]') !== null) {
+      document.querySelector('meta[name="theme-color"]').setAttribute('content', '#0d0d0d')
+    }
+  }
+  window.activateLightMode = function () {
+    document.documentElement.setAttribute('data-theme', 'light')
+   if (document.querySelector('meta[name="theme-color"]') !== null) {
+      document.querySelector('meta[name="theme-color"]').setAttribute('content', '#ffffff')
+    }
+  }
+  const autoChangeMode = 'false'
+  const t = saveToLocal.get('theme')
+  if (autoChangeMode === '1') {
+    const isDarkMode = window.matchMedia('(prefers-color-scheme: dark)').matches
+    const isLightMode = window.matchMedia('(prefers-color-scheme: light)').matches
+    const isNotSpecified = window.matchMedia('(prefers-color-scheme: no-preference)').matches
+    const hasNoSupport = !isDarkMode && !isLightMode && !isNotSpecified
+    if (t === undefined) {
+      if (isLightMode) activateLightMode()
+      else if (isDarkMode) activateDarkMode()
+      else if (isNotSpecified || hasNoSupport) {
+        const now = new Date()
+        const hour = now.getHours()
+        const isNight = hour <= 6 || hour >= 18
+        isNight ? activateDarkMode() : activateLightMode()
+      }
+      window.matchMedia('(prefers-color-scheme: dark)').addListener(function (e) {
+        if (saveToLocal.get('theme') === undefined) {
+          e.matches ? activateDarkMode() : activateLightMode()
+        }
+      })
+    } else if (t === 'light') activateLightMode()
+    else activateDarkMode()
+  } else if (autoChangeMode === '2') {
+    const now = new Date()
+    const hour = now.getHours()
+    const isNight = hour <= 6 || hour >= 18
+    if (t === undefined) isNight ? activateDarkMode() : activateLightMode()
+    else if (t === 'light') activateLightMode()
+    else activateDarkMode()
+  } else {
+    if (t === 'dark') activateDarkMode()
+    else if (t === 'light') activateLightMode()
+  }const asideStatus = saveToLocal.get('aside-status')
+if (asideStatus !== undefined) {
+   if (asideStatus === 'hide') {
+     document.documentElement.classList.add('hide-aside')
+   } else {
+     document.documentElement.classList.remove('hide-aside')
+   }
+}})()</script><meta name="generator" content="Hexo 5.2.0"></head><body><div id="sidebar"><div id="menu-mask"></div><div id="sidebar-menus"><div class="author-avatar"><img class="avatar-img" src="https://gitee.com/JiShuXiaoDang/Image/raw/master/hexo/%E5%A4%B4%E5%83%8F-%E7%8C%AB.jpg" onerror="onerror=null;src='/img/friend_404.gif'" alt="avatar"/></div><div class="site-data"><div class="data-item is-center"><div class="data-item-link"><a href="/archives/"><div class="headline">文章</div><div class="length-num">22</div></a></div></div><div class="data-item is-center"><div class="data-item-link"><a href="/tags/"><div class="headline">标签</div><div class="length-num">31</div></a></div></div><div class="data-item is-center"><div class="data-item-link"><a href="/categories/"><div class="headline">分类</div><div class="length-num">5</div></a></div></div></div><hr/><div class="menus_items"><div class="menus_item"><a class="site-page" href="/"><i class="fa-fw fas fa-home"></i><span> 首页</span></a></div><div class="menus_item"><a class="site-page" href="/archives/"><i class="fa-fw fas fa-archive"></i><span> 时间轴</span></a></div><div class="menus_item"><a class="site-page" href="/tags/"><i class="fa-fw fas fa-tags"></i><span> 标签</span></a></div><div class="menus_item"><a class="site-page" href="/categories/"><i class="fa-fw fas fa-folder-open"></i><span> 分类</span></a></div><div class="menus_item"><a class="site-page" href="/link/"><i class="fa-fw fas fa-link"></i><span> 友链</span></a></div><div class="menus_item"><a class="site-page" href="/about/"><i class="fa-fw fas fa-heart"></i><span> 关于</span></a></div></div></div></div><div id="body-wrap"><header class="post-bg" id="page-header" style="background-image: url(https://gitee.com/JiShuXiaoDang/Image/raw/master/hexo/%E9%BA%A6%E8%8A%92.jpg)"><nav id="nav"><span id="blog_name"><a id="site-name" href="/">技术小党</a></span><span id="menus"><div class="menus_items"><div class="menus_item"><a class="site-page" href="/"><i class="fa-fw fas fa-home"></i><span> 首页</span></a></div><div class="menus_item"><a class="site-page" href="/archives/"><i class="fa-fw fas fa-archive"></i><span> 时间轴</span></a></div><div class="menus_item"><a class="site-page" href="/tags/"><i class="fa-fw fas fa-tags"></i><span> 标签</span></a></div><div class="menus_item"><a class="site-page" href="/categories/"><i class="fa-fw fas fa-folder-open"></i><span> 分类</span></a></div><div class="menus_item"><a class="site-page" href="/link/"><i class="fa-fw fas fa-link"></i><span> 友链</span></a></div><div class="menus_item"><a class="site-page" href="/about/"><i class="fa-fw fas fa-heart"></i><span> 关于</span></a></div></div><span class="close" id="toggle-menu"><a class="site-page"><i class="fas fa-bars fa-fw"></i></a></span></span></nav><div id="post-info"><h1 class="post-title">Redis复制</h1><div id="post-meta"><div class="meta-firstline"><span class="post-meta-date"><i class="far fa-calendar-alt fa-fw post-meta-icon"></i><span class="post-meta-label">发表于</span><time class="post-meta-date-created" datetime="2021-02-03T14:34:43.000Z" title="发表于 2021-02-03 22:34:43">2021-02-03</time><span class="post-meta-separator">|</span><i class="fas fa-history fa-fw post-meta-icon"></i><span class="post-meta-label">更新于</span><time class="post-meta-date-updated" datetime="2021-03-02T15:27:04.226Z" title="更新于 2021-03-02 23:27:04">2021-03-02</time></span><span class="post-meta-categories"><span class="post-meta-separator">|</span><i class="fas fa-inbox fa-fw post-meta-icon"></i><a class="post-meta-categories" href="/categories/Redis%E4%B8%BB%E4%BB%8E%E7%BB%93%E6%9E%84/">Redis主从结构</a></span></div><div class="meta-secondline"> </div></div></div></header><main class="layout" id="content-inner"><div id="post"><article class="post-content" id="article-container"><p>Redis实例可以划分为主节点（master）和从节点（slave）。默认情况下都是主节点。每个从节点只能有一个主节点，而主节点可以有多个从节点。数据流只能从主节点复制到从节点。</p>
+<h4 id="设置主节点"><a href="#设置主节点" class="headerlink" title="设置主节点"></a>设置主节点</h4><blockquote>
+<ol>
+<li>在redis的配置文件中添加 slaveof  {masterHost} {masterPort} 随Redis启动生效</li>
+<li>在redis-server启动命令后加入 –slaveof  {masterHost} {masterPort}</li>
+<li>使用redis-cli连接到redis服务后，直接使用命令slaveof  {masterHost} {masterPort}</li>
+</ol>
+</blockquote>
+<p>查看主节点信息</p>
+<figure class="highlight shell"><table><tr><td class="gutter"><pre><span class="line">1</span><br><span class="line">2</span><br><span class="line">3</span><br><span class="line">4</span><br></pre></td><td class="code"><pre><span class="line">127.0.0.1:6379&gt;info replication</span><br><span class="line"><span class="meta">#</span><span class="bash"> Replication</span></span><br><span class="line">role:master connected_slaves:1 slave0:ip=127.0.0.1,port=6379,state=online,offset=43,lag=0</span><br><span class="line">....</span><br></pre></td></tr></table></figure>
+
+<p>查看从节点信息</p>
+<figure class="highlight shell"><table><tr><td class="gutter"><pre><span class="line">1</span><br><span class="line">2</span><br><span class="line">3</span><br><span class="line">4</span><br><span class="line">5</span><br><span class="line">6</span><br><span class="line">7</span><br><span class="line">8</span><br><span class="line">9</span><br></pre></td><td class="code"><pre><span class="line">127.0.0.1:6380&gt;info replication</span><br><span class="line"><span class="meta">#</span><span class="bash"> Replication</span></span><br><span class="line">role:slave</span><br><span class="line">master_host:127.0.0.1</span><br><span class="line">master_port:6380</span><br><span class="line">master_link_status:up</span><br><span class="line">master_last_io_seconds_ago:4</span><br><span class="line">master_sync_in_progress:0</span><br><span class="line">...</span><br></pre></td></tr></table></figure>
+
+<p>默认情况下，从节点使用slave-read-only=yes配置为<strong>只读模式</strong>。由于复制只能从主节点到从节点，对于从节点的任何修改主节点都无法感知，修改从节点会造成主从数据不一致。因此建议不要修改从节点的只读模式。</p>
+<h4 id="断开连接"><a href="#断开连接" class="headerlink" title="断开连接"></a>断开连接</h4><blockquote>
+<p>在从节点一端可使用<strong>slaveof  no  one</strong> 断开与主节点的关系</p>
+<p>流程：</p>
+<ol>
+<li><p>断开与从节点的复制关系</p>
+</li>
+<li><p>从节点晋升为主节点</p>
+<p>从节点断开复制后并不会抛弃原有数据，只是无法再获取主节点上的数 </p>
+<p>据变化。</p>
+</li>
+</ol>
+</blockquote>
+<h4 id="数据复制时机"><a href="#数据复制时机" class="headerlink" title="数据复制时机"></a>数据复制时机</h4><p>主从节点一般部署在不同的机器上，复制时的网络延迟需要考虑。</p>
+<p>redis提供了repl-disable-tcp-nodelay参数用于控制是否关闭 TCP_NODELAY</p>
+<ul>
+<li>关闭时：主节点产生的命令数据会及时的发送给从节点<ul>
+<li>优点：主从之间的延迟变小</li>
+<li>缺点：增加了网络带宽消耗</li>
+<li>适用于主从之间网络良好的场景，如局域网</li>
+</ul>
+</li>
+<li>开启时：主节点会合并较小的TCP数据包从而节省带宽。默认发送时间间隔取决于Linux的内核，一般默认40ms<ul>
+<li>优点：节省带宽消耗</li>
+<li>缺点：主从之间的延迟增大</li>
+<li>适用于主从网络环境复杂的场景。</li>
+</ul>
+</li>
+</ul>
+<h4 id="主从结构"><a href="#主从结构" class="headerlink" title="主从结构"></a>主从结构</h4><p>redis的复制拓扑结构可以支持单层或多层复制关系，如一主一从，一主多从，树状主从结构。</p>
+<h5 id="一主一从结构"><a href="#一主一从结构" class="headerlink" title="一主一从结构"></a>一主一从结构</h5><blockquote>
+<ul>
+<li>可用于主节点出现宕机时从节点提供故障转移支持。</li>
+<li>当应用写命令并发量高且需要持久化时,可以只在从节点上开启AOF，既可以保证数据安全性，也避免了持久化对主节点的性能干扰。<ul>
+<li>注意：需要注意避免主节点重启，因为主节点没开启持久化功能，自动重启后数据集为空，这是从节点复制主节点数据也会为空</li>
+<li>解决方案：重启主节点前，在从节点上执行slaveof no one 断开与主节点的复制关系再重启。</li>
+</ul>
+</li>
+</ul>
+</blockquote>
+<h5 id="一主多从结构"><a href="#一主多从结构" class="headerlink" title="一主多从结构"></a>一主多从结构</h5><blockquote>
+<ul>
+<li>可用于读占比较大的场景，可以把读命令发送到从节点来分担主节点压力。同时在日常开发中如果需要执行一些比较耗时的读命令，如keys，sort等，可以选择在其中一台从节点执行，防止慢查询造成阻塞从而影响线上服务稳定性。</li>
+<li>需要避免写并发量较高的场景，多个从节点会导致主节点写命令多次发送而过度消耗网络宽带。</li>
+</ul>
+</blockquote>
+<h5 id="树状主从结构"><a href="#树状主从结构" class="headerlink" title="树状主从结构"></a>树状主从结构</h5><blockquote>
+<p>一个主节点可以有少量从节点，而从节点也可同时作为其他从节点的主节点继续向下复制，如同树的结构。</p>
+<ul>
+<li>通过引入中间层的从节点，可以有效降低大量写操作产生的宽带消耗。</li>
+</ul>
+</blockquote>
+<h4 id="复制流程"><a href="#复制流程" class="headerlink" title="复制流程"></a>复制流程</h4><p>复制操作可分为6步-如图所示：</p>
+<img src="https://gitee.com/JiShuXiaoDang/Image/raw/master/redis/Redis%E5%A4%8D%E5%88%B6.png" style="zoom:67%;" />
+
+<blockquote>
+<ol>
+<li>保存主节点信息<ol>
+<li>执行slaveof后从节点只保存主节点的地址信息便直接返回，这是复制流程还没开始。</li>
+</ol>
+</li>
+<li>主从建立socket连接<ol>
+<li>从节点内部每秒运行的定时任务会维护复制相关逻辑，当定时任务发现存在主节点后，会尝试与该节点建立网络连接。</li>
+<li>从节点建立socket，用于接受主节点发送的复制命令。</li>
+</ol>
+</li>
+<li>发送ping命令<ul>
+<li>检查主从网络是否可用</li>
+<li>检查主节点当前是否可接受处理命令</li>
+<li>如果没有收到主节点的pong回复或超时，从节点会断开复制连接，下次定时任务会重新连接</li>
+</ul>
+</li>
+<li>权限验证<ul>
+<li>如果主节点设置了密码（requirepass），则需要密码验证，从节点必须配置masterauth参数。</li>
+</ul>
+</li>
+<li>同步数据集<ul>
+<li>首次建立复制，主节点会把所有的数据全部发送给从节点。</li>
+</ul>
+</li>
+<li>命令持续复制</li>
+</ol>
+</blockquote>
+</article><div class="post-copyright"><div class="post-copyright__author"><span class="post-copyright-meta">文章作者: </span><span class="post-copyright-info"><a href="mailto:undefined">王英杰</a></span></div><div class="post-copyright__type"><span class="post-copyright-meta">文章链接: </span><span class="post-copyright-info"><a href="http://bugjie.com/2021/02/03/redis/Redis%E5%A4%8D%E5%88%B6/">http://bugjie.com/2021/02/03/redis/Redis%E5%A4%8D%E5%88%B6/</a></span></div><div class="post-copyright__notice"><span class="post-copyright-meta">版权声明: </span><span class="post-copyright-info">本博客所有文章除特别声明外，均采用 <a href="https://creativecommons.org/licenses/by-nc-sa/4.0/" target="_blank">CC BY-NC-SA 4.0</a> 许可协议。转载请注明来自 <a href="http://bugjie.com" target="_blank">技术小党</a>！</span></div></div><div class="tag_share"><div class="post-meta__tag-list"><a class="post-meta__tags" href="/tags/Redis%E4%B8%BB%E4%BB%8E%E7%BB%93%E6%9E%84/">Redis主从结构</a></div><div class="post_share"><div class="social-share" data-image="https://gitee.com/JiShuXiaoDang/Image/raw/master/hexo/%E9%BA%A6%E8%8A%92.jpg" data-sites="facebook,twitter,wechat,weibo,qq"></div><link rel="stylesheet" href="https://cdn.jsdelivr.net/npm/social-share.js/dist/css/share.min.css"><script src="https://cdn.jsdelivr.net/npm/social-share.js/dist/js/social-share.min.js" defer></script></div></div><nav class="pagination-post" id="pagination"><div class="next-post pull-full"><a href="/2021/01/09/%E8%AE%BE%E8%AE%A1%E6%A8%A1%E5%BC%8F/5.%E5%8D%95%E4%BE%8B%E6%A8%A1%E5%BC%8F/"><img class="next-cover" src="https://gitee.com/JiShuXiaoDang/Image/raw/master/hexo/blog/%E6%99%9A%E4%B8%8A%E6%B5%B7%E8%BE%B9.jpeg" onerror="onerror=null;src='/img/404.jpg'"><div class="pagination-info"><div class="label">下一篇</div><div class="next_info">单例模式</div></div></a></div></nav></div><div class="aside_content" id="aside_content"><div class="card-widget card-info"><div class="card-content"><div class="card-info-avatar is-center"><img class="avatar-img" src="https://gitee.com/JiShuXiaoDang/Image/raw/master/hexo/%E5%A4%B4%E5%83%8F-%E7%8C%AB.jpg" onerror="this.onerror=null;this.src='/img/friend_404.gif'" alt="avatar"/><div class="author-info__name">王英杰</div><div class="author-info__description"></div></div><div class="card-info-data"><div class="card-info-data-item is-center"><a href="/archives/"><div class="headline">文章</div><div class="length-num">22</div></a></div><div class="card-info-data-item is-center"><a href="/tags/"><div class="headline">标签</div><div class="length-num">31</div></a></div><div class="card-info-data-item is-center"><a href="/categories/"><div class="headline">分类</div><div class="length-num">5</div></a></div></div><a class="button--animated" id="card-info-btn" target="_blank" rel="noopener" href="https://github.com/jishuxiaodang"><i class="fab fa-github"></i><span>Follow Me</span></a></div></div><div class="sticky_layout"><div class="card-widget" id="card-toc"><div class="card-content"><div class="item-headline"><i class="fas fa-stream"></i><span>目录</span></div><div class="toc-content"><ol class="toc"><li class="toc-item toc-level-4"><a class="toc-link" href="#%E8%AE%BE%E7%BD%AE%E4%B8%BB%E8%8A%82%E7%82%B9"><span class="toc-number">1.</span> <span class="toc-text">设置主节点</span></a></li><li class="toc-item toc-level-4"><a class="toc-link" href="#%E6%96%AD%E5%BC%80%E8%BF%9E%E6%8E%A5"><span class="toc-number">2.</span> <span class="toc-text">断开连接</span></a></li><li class="toc-item toc-level-4"><a class="toc-link" href="#%E6%95%B0%E6%8D%AE%E5%A4%8D%E5%88%B6%E6%97%B6%E6%9C%BA"><span class="toc-number">3.</span> <span class="toc-text">数据复制时机</span></a></li><li class="toc-item toc-level-4"><a class="toc-link" href="#%E4%B8%BB%E4%BB%8E%E7%BB%93%E6%9E%84"><span class="toc-number">4.</span> <span class="toc-text">主从结构</span></a><ol class="toc-child"><li class="toc-item toc-level-5"><a class="toc-link" href="#%E4%B8%80%E4%B8%BB%E4%B8%80%E4%BB%8E%E7%BB%93%E6%9E%84"><span class="toc-number">4.1.</span> <span class="toc-text">一主一从结构</span></a></li><li class="toc-item toc-level-5"><a class="toc-link" href="#%E4%B8%80%E4%B8%BB%E5%A4%9A%E4%BB%8E%E7%BB%93%E6%9E%84"><span class="toc-number">4.2.</span> <span class="toc-text">一主多从结构</span></a></li><li class="toc-item toc-level-5"><a class="toc-link" href="#%E6%A0%91%E7%8A%B6%E4%B8%BB%E4%BB%8E%E7%BB%93%E6%9E%84"><span class="toc-number">4.3.</span> <span class="toc-text">树状主从结构</span></a></li></ol></li><li class="toc-item toc-level-4"><a class="toc-link" href="#%E5%A4%8D%E5%88%B6%E6%B5%81%E7%A8%8B"><span class="toc-number">5.</span> <span class="toc-text">复制流程</span></a></li></ol></div></div></div><div class="card-widget card-recent-post"><div class="card-content"><div class="item-headline"><i class="fas fa-history"></i><span>最新文章</span></div><div class="aside-list"><div class="aside-list-item"><a class="thumbnail" href="/2021/02/03/redis/Redis%E5%A4%8D%E5%88%B6/" title="Redis复制"><img src="https://gitee.com/JiShuXiaoDang/Image/raw/master/hexo/%E9%BA%A6%E8%8A%92.jpg" onerror="this.onerror=null;this.src='/img/404.jpg'" alt="Redis复制"/></a><div class="content"><a class="title" href="/2021/02/03/redis/Redis%E5%A4%8D%E5%88%B6/" title="Redis复制">Redis复制</a><time datetime="2021-02-03T14:34:43.000Z" title="发表于 2021-02-03 22:34:43">2021-02-03</time></div></div><div class="aside-list-item"><a class="thumbnail" href="/2021/01/09/%E8%AE%BE%E8%AE%A1%E6%A8%A1%E5%BC%8F/5.%E5%8D%95%E4%BE%8B%E6%A8%A1%E5%BC%8F/" title="单例模式"><img src="https://gitee.com/JiShuXiaoDang/Image/raw/master/hexo/blog/%E6%99%9A%E4%B8%8A%E6%B5%B7%E8%BE%B9.jpeg" onerror="this.onerror=null;this.src='/img/404.jpg'" alt="单例模式"/></a><div class="content"><a class="title" href="/2021/01/09/%E8%AE%BE%E8%AE%A1%E6%A8%A1%E5%BC%8F/5.%E5%8D%95%E4%BE%8B%E6%A8%A1%E5%BC%8F/" title="单例模式">单例模式</a><time datetime="2021-01-09T12:06:31.000Z" title="发表于 2021-01-09 20:06:31">2021-01-09</time></div></div><div class="aside-list-item"><a class="thumbnail" href="/2020/12/06/java%E5%B9%B6%E5%8F%91%E7%BC%96%E7%A8%8B/ThreadLocal%E5%8E%9F%E7%90%86/" title="ThreadLocal原理"><img src="https://gitee.com/JiShuXiaoDang/Image/raw/master/hexo/blog/001.jpg" onerror="this.onerror=null;this.src='/img/404.jpg'" alt="ThreadLocal原理"/></a><div class="content"><a class="title" href="/2020/12/06/java%E5%B9%B6%E5%8F%91%E7%BC%96%E7%A8%8B/ThreadLocal%E5%8E%9F%E7%90%86/" title="ThreadLocal原理">ThreadLocal原理</a><time datetime="2020-12-06T15:34:14.000Z" title="发表于 2020-12-06 23:34:14">2020-12-06</time></div></div><div class="aside-list-item"><a class="thumbnail" href="/2020/12/06/java%E5%B9%B6%E5%8F%91%E7%BC%96%E7%A8%8B/java%E7%BA%BF%E7%A8%8B%E6%B1%A0/" title="java线程池"><img src="https://gitee.com/JiShuXiaoDang/Image/raw/master/hexo/blog/%E7%BB%BF%E6%B5%B7.jpeg" onerror="this.onerror=null;this.src='/img/404.jpg'" alt="java线程池"/></a><div class="content"><a class="title" href="/2020/12/06/java%E5%B9%B6%E5%8F%91%E7%BC%96%E7%A8%8B/java%E7%BA%BF%E7%A8%8B%E6%B1%A0/" title="java线程池">java线程池</a><time datetime="2020-12-06T12:34:43.000Z" title="发表于 2020-12-06 20:34:43">2020-12-06</time></div></div><div class="aside-list-item"><a class="thumbnail" href="/2020/11/22/java%E5%B9%B6%E5%8F%91%E7%BC%96%E7%A8%8B/java%E5%B9%B6%E5%8F%91%E7%BC%96%E7%A8%8B-7.Executor%E6%A1%86%E6%9E%B6/" title="java并发编程-7.Executor框架"><img src="https://gitee.com/JiShuXiaoDang/Image/raw/master/hexo/blog/%E5%B0%8F%E9%B8%9F.jpeg" onerror="this.onerror=null;this.src='/img/404.jpg'" alt="java并发编程-7.Executor框架"/></a><div class="content"><a class="title" href="/2020/11/22/java%E5%B9%B6%E5%8F%91%E7%BC%96%E7%A8%8B/java%E5%B9%B6%E5%8F%91%E7%BC%96%E7%A8%8B-7.Executor%E6%A1%86%E6%9E%B6/" title="java并发编程-7.Executor框架">java并发编程-7.Executor框架</a><time datetime="2020-11-22T14:40:13.000Z" title="发表于 2020-11-22 22:40:13">2020-11-22</time></div></div></div></div></div></div></div></main><footer id="footer" style="background-image: url(https://gitee.com/JiShuXiaoDang/Image/raw/master/hexo/%E9%BA%A6%E8%8A%92.jpg)"><div id="footer-wrap"><div class="footer_custom_text">Copyright © 王英杰 2020</div><div class="icp"><a target="_blank" rel="noopener" href="https://beian.miit.gov.cn/"><img class="icp-icon" src="/img/icp.png" alt="ICP"/><span>冀ICP备18029820号-1</span></a></div></div></footer></div><div id="rightside"><div id="rightside-config-hide"><button id="readmode" type="button" title="阅读模式"><i class="fas fa-book-open"></i></button><button id="darkmode" type="button" title="浅色和深色模式转换"><i class="fas fa-adjust"></i></button><button id="hide-aside-btn" type="button"><i class="fas fa-arrows-alt-h"></i></button></div><div id="rightside-config-show"><button id="rightside_config" type="button" title="设置"><i class="fas fa-cog"></i></button><button class="close" id="mobile-toc-button" type="button" title="目录"><i class="fas fa-list-ul"></i></button><button id="go-up" type="button" title="回到顶部"><i class="fas fa-arrow-up"></i></button></div></div><div><script src="https://cdn.jsdelivr.net/npm/jquery@latest/dist/jquery.min.js"></script><script src="/js/utils.js"></script><script src="/js/main.js"></script><script src="https://cdn.jsdelivr.net/npm/@fancyapps/fancybox@latest/dist/jquery.fancybox.min.js"></script><div class="js-pjax"></div></div></body></html>
