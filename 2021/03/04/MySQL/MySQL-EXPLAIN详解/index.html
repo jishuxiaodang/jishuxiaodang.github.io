@@ -1,0 +1,308 @@
+<!DOCTYPE html><html lang="zh-CN" data-theme="light"><head><meta charset="UTF-8"><meta http-equiv="X-UA-Compatible" content="IE=edge"><meta name="viewport" content="width=device-width,initial-scale=1"><title>MySQL-EXPLAIN详解 | 技术小党</title><meta name="keywords" content="EXPLAIN"><meta name="author" content="王英杰"><meta name="copyright" content="王英杰"><meta name="format-detection" content="telephone=no"><meta name="theme-color" content="#ffffff"><meta http-equiv="Cache-Control" content="no-transform"><meta http-equiv="Cache-Control" content="no-siteapp"><meta name="description" content="MySQL执行计划介绍">
+<meta property="og:type" content="article">
+<meta property="og:title" content="MySQL-EXPLAIN详解">
+<meta property="og:url" content="http://bugjie.com/2021/03/04/MySQL/MySQL-EXPLAIN%E8%AF%A6%E8%A7%A3/index.html">
+<meta property="og:site_name" content="技术小党">
+<meta property="og:description" content="MySQL执行计划介绍">
+<meta property="og:locale" content="zh_CN">
+<meta property="og:image" content="https://gitee.com/JiShuXiaoDang/Image/raw/master/hexo/blog/%E5%AF%92%E5%86%B0%E5%B0%84%E6%89%8B.jpg">
+<meta property="article:published_time" content="2021-03-04T14:30:09.000Z">
+<meta property="article:modified_time" content="2021-03-04T14:28:50.837Z">
+<meta property="article:author" content="王英杰">
+<meta property="article:tag" content="EXPLAIN">
+<meta name="twitter:card" content="summary">
+<meta name="twitter:image" content="https://gitee.com/JiShuXiaoDang/Image/raw/master/hexo/blog/%E5%AF%92%E5%86%B0%E5%B0%84%E6%89%8B.jpg"><link rel="shortcut icon" href="https://gitee.com/JiShuXiaoDang/Image/raw/master/hexo/%E7%8C%ABicon.png"><link rel="canonical" href="http://bugjie.com/2021/03/04/MySQL/MySQL-EXPLAIN%E8%AF%A6%E8%A7%A3/"><link rel="preconnect" href="//cdn.jsdelivr.net"/><link rel="stylesheet" href="/css/index.css"><link rel="stylesheet" href="https://cdn.jsdelivr.net/npm/@fortawesome/fontawesome-free/css/all.min.css"><link rel="stylesheet" href="https://cdn.jsdelivr.net/npm/@fancyapps/fancybox@latest/dist/jquery.fancybox.min.css"><script>var GLOBAL_CONFIG = { 
+  root: '/',
+  algolia: undefined,
+  localSearch: undefined,
+  translate: undefined,
+  noticeOutdate: undefined,
+  highlight: {"plugin":"highlighjs","highlightCopy":true,"highlightLang":true},
+  copy: {
+    success: '复制成功',
+    error: '复制错误',
+    noSupport: '浏览器不支持'
+  },
+  relativeDate: {
+    homepage: false,
+    post: false
+  },
+  runtime: '',
+  date_suffix: {
+    just: '刚刚',
+    min: '分钟前',
+    hour: '小时前',
+    day: '天前',
+    month: '个月前'
+  },
+  copyright: undefined,
+  ClickShowText: undefined,
+  lightbox: 'fancybox',
+  Snackbar: undefined,
+  justifiedGallery: {
+    js: 'https://cdn.jsdelivr.net/npm/justifiedGallery/dist/js/jquery.justifiedGallery.min.js',
+    css: 'https://cdn.jsdelivr.net/npm/justifiedGallery/dist/css/justifiedGallery.min.css'
+  },
+  isPhotoFigcaption: false,
+  islazyload: false,
+  isanchor: false
+};
+
+var saveToLocal = {
+  set: function setWithExpiry(key, value, ttl) {
+    const now = new Date()
+    const expiryDay = ttl * 86400000
+    const item = {
+      value: value,
+      expiry: now.getTime() + expiryDay,
+    }
+    localStorage.setItem(key, JSON.stringify(item))
+  },
+
+  get: function getWithExpiry(key) {
+    const itemStr = localStorage.getItem(key)
+
+    if (!itemStr) {
+      return undefined
+    }
+    const item = JSON.parse(itemStr)
+    const now = new Date()
+
+    if (now.getTime() > item.expiry) {
+      localStorage.removeItem(key)
+      return undefined
+    }
+    return item.value
+  }
+}</script><script id="config_change">var GLOBAL_CONFIG_SITE = { 
+  isPost: true,
+  isHome: false,
+  isHighlightShrink: false,
+  isToc: true,
+  postUpdate: '2021-03-04 22:28:50'
+}</script><noscript><style type="text/css">
+  #nav {
+    opacity: 1
+  }
+  .justified-gallery img {
+    opacity: 1
+  }
+
+  #recent-posts time,
+  #post-meta time {
+    display: inline !important
+  }
+</style></noscript><script>(function () {  window.activateDarkMode = function () {
+    document.documentElement.setAttribute('data-theme', 'dark')
+    if (document.querySelector('meta[name="theme-color"]') !== null) {
+      document.querySelector('meta[name="theme-color"]').setAttribute('content', '#0d0d0d')
+    }
+  }
+  window.activateLightMode = function () {
+    document.documentElement.setAttribute('data-theme', 'light')
+   if (document.querySelector('meta[name="theme-color"]') !== null) {
+      document.querySelector('meta[name="theme-color"]').setAttribute('content', '#ffffff')
+    }
+  }
+  const autoChangeMode = 'false'
+  const t = saveToLocal.get('theme')
+  if (autoChangeMode === '1') {
+    const isDarkMode = window.matchMedia('(prefers-color-scheme: dark)').matches
+    const isLightMode = window.matchMedia('(prefers-color-scheme: light)').matches
+    const isNotSpecified = window.matchMedia('(prefers-color-scheme: no-preference)').matches
+    const hasNoSupport = !isDarkMode && !isLightMode && !isNotSpecified
+    if (t === undefined) {
+      if (isLightMode) activateLightMode()
+      else if (isDarkMode) activateDarkMode()
+      else if (isNotSpecified || hasNoSupport) {
+        const now = new Date()
+        const hour = now.getHours()
+        const isNight = hour <= 6 || hour >= 18
+        isNight ? activateDarkMode() : activateLightMode()
+      }
+      window.matchMedia('(prefers-color-scheme: dark)').addListener(function (e) {
+        if (saveToLocal.get('theme') === undefined) {
+          e.matches ? activateDarkMode() : activateLightMode()
+        }
+      })
+    } else if (t === 'light') activateLightMode()
+    else activateDarkMode()
+  } else if (autoChangeMode === '2') {
+    const now = new Date()
+    const hour = now.getHours()
+    const isNight = hour <= 6 || hour >= 18
+    if (t === undefined) isNight ? activateDarkMode() : activateLightMode()
+    else if (t === 'light') activateLightMode()
+    else activateDarkMode()
+  } else {
+    if (t === 'dark') activateDarkMode()
+    else if (t === 'light') activateLightMode()
+  }const asideStatus = saveToLocal.get('aside-status')
+if (asideStatus !== undefined) {
+   if (asideStatus === 'hide') {
+     document.documentElement.classList.add('hide-aside')
+   } else {
+     document.documentElement.classList.remove('hide-aside')
+   }
+}})()</script><meta name="generator" content="Hexo 5.2.0"></head><body><div id="sidebar"><div id="menu-mask"></div><div id="sidebar-menus"><div class="author-avatar"><img class="avatar-img" src="https://gitee.com/JiShuXiaoDang/Image/raw/master/hexo/%E5%A4%B4%E5%83%8F-%E7%8C%AB.jpg" onerror="onerror=null;src='/img/friend_404.gif'" alt="avatar"/></div><div class="site-data"><div class="data-item is-center"><div class="data-item-link"><a href="/archives/"><div class="headline">文章</div><div class="length-num">23</div></a></div></div><div class="data-item is-center"><div class="data-item-link"><a href="/tags/"><div class="headline">标签</div><div class="length-num">32</div></a></div></div><div class="data-item is-center"><div class="data-item-link"><a href="/categories/"><div class="headline">分类</div><div class="length-num">6</div></a></div></div></div><hr/><div class="menus_items"><div class="menus_item"><a class="site-page" href="/"><i class="fa-fw fas fa-home"></i><span> 首页</span></a></div><div class="menus_item"><a class="site-page" href="/archives/"><i class="fa-fw fas fa-archive"></i><span> 时间轴</span></a></div><div class="menus_item"><a class="site-page" href="/tags/"><i class="fa-fw fas fa-tags"></i><span> 标签</span></a></div><div class="menus_item"><a class="site-page" href="/categories/"><i class="fa-fw fas fa-folder-open"></i><span> 分类</span></a></div><div class="menus_item"><a class="site-page" href="/link/"><i class="fa-fw fas fa-link"></i><span> 友链</span></a></div><div class="menus_item"><a class="site-page" href="/about/"><i class="fa-fw fas fa-heart"></i><span> 关于</span></a></div></div></div></div><div id="body-wrap"><header class="post-bg" id="page-header" style="background-image: url(https://gitee.com/JiShuXiaoDang/Image/raw/master/hexo/blog/%E5%AF%92%E5%86%B0%E5%B0%84%E6%89%8B.jpg)"><nav id="nav"><span id="blog_name"><a id="site-name" href="/">技术小党</a></span><span id="menus"><div class="menus_items"><div class="menus_item"><a class="site-page" href="/"><i class="fa-fw fas fa-home"></i><span> 首页</span></a></div><div class="menus_item"><a class="site-page" href="/archives/"><i class="fa-fw fas fa-archive"></i><span> 时间轴</span></a></div><div class="menus_item"><a class="site-page" href="/tags/"><i class="fa-fw fas fa-tags"></i><span> 标签</span></a></div><div class="menus_item"><a class="site-page" href="/categories/"><i class="fa-fw fas fa-folder-open"></i><span> 分类</span></a></div><div class="menus_item"><a class="site-page" href="/link/"><i class="fa-fw fas fa-link"></i><span> 友链</span></a></div><div class="menus_item"><a class="site-page" href="/about/"><i class="fa-fw fas fa-heart"></i><span> 关于</span></a></div></div><span class="close" id="toggle-menu"><a class="site-page"><i class="fas fa-bars fa-fw"></i></a></span></span></nav><div id="post-info"><h1 class="post-title">MySQL-EXPLAIN详解</h1><div id="post-meta"><div class="meta-firstline"><span class="post-meta-date"><i class="far fa-calendar-alt fa-fw post-meta-icon"></i><span class="post-meta-label">发表于</span><time class="post-meta-date-created" datetime="2021-03-04T14:30:09.000Z" title="发表于 2021-03-04 22:30:09">2021-03-04</time><span class="post-meta-separator">|</span><i class="fas fa-history fa-fw post-meta-icon"></i><span class="post-meta-label">更新于</span><time class="post-meta-date-updated" datetime="2021-03-04T14:28:50.837Z" title="更新于 2021-03-04 22:28:50">2021-03-04</time></span><span class="post-meta-categories"><span class="post-meta-separator">|</span><i class="fas fa-inbox fa-fw post-meta-icon"></i><a class="post-meta-categories" href="/categories/MySQL/">MySQL</a></span></div><div class="meta-secondline"> </div></div></div></header><main class="layout" id="content-inner"><div id="post"><article class="post-content" id="article-container"><h2 id="执行计划列名整体描述"><a href="#执行计划列名整体描述" class="headerlink" title="执行计划列名整体描述"></a>执行计划列名整体描述</h2><table>
+<thead>
+<tr>
+<th>列名</th>
+<th>描述</th>
+</tr>
+</thead>
+<tbody><tr>
+<td>id</td>
+<td>在一个查询语句中，每一个select关键字都会对应一个唯一id</td>
+</tr>
+<tr>
+<td>select_type</td>
+<td>查询类型（重要）</td>
+</tr>
+<tr>
+<td>table</td>
+<td>表名</td>
+</tr>
+<tr>
+<td>partitions</td>
+<td>匹配的分区信息</td>
+</tr>
+<tr>
+<td>type</td>
+<td>对于单表的访问方法（重要）</td>
+</tr>
+<tr>
+<td>possible_keys</td>
+<td>可能用到的索引</td>
+</tr>
+<tr>
+<td>key</td>
+<td>实际用到的索引（重要）</td>
+</tr>
+<tr>
+<td>key_len</td>
+<td>实际使用到的索引长度</td>
+</tr>
+<tr>
+<td>ref</td>
+<td>当使用索引列等值查询时，与索引列进行等值匹配的对象信息（重要）</td>
+</tr>
+<tr>
+<td>rows</td>
+<td>预估需要读取的记录条数</td>
+</tr>
+<tr>
+<td>filtered</td>
+<td>某个表经过搜索条件过滤后剩余记录条数的百分比</td>
+</tr>
+<tr>
+<td>Extra</td>
+<td>额外信息</td>
+</tr>
+</tbody></table>
+<p>首先我们创建两张表，表结构如下（注意，下面例子中的查询并无逻辑关系，只是作为例子使用）</p>
+<figure class="highlight plain"><table><tr><td class="gutter"><pre><span class="line">1</span><br><span class="line">2</span><br><span class="line">3</span><br><span class="line">4</span><br><span class="line">5</span><br><span class="line">6</span><br><span class="line">7</span><br><span class="line">8</span><br><span class="line">9</span><br><span class="line">10</span><br><span class="line">11</span><br></pre></td><td class="code"><pre><span class="line">CREATE TABLE &#96;student_record&#96; (</span><br><span class="line">  &#96;record_id&#96; bigint(20) NOT NULL AUTO_INCREMENT COMMENT &#39;主键&#39;,</span><br><span class="line">  &#96;record_id&#96; bigint(20) NOT NULL AUTO_INCREMENT COMMENT &#39;主键&#39;,</span><br><span class="line">  &#96;student_id&#96; bigint(20) NOT NULL DEFAULT &#39;0&#39; COMMENT &#39;学生id&#39;,</span><br><span class="line">  &#96;unique_id&#96; bigint(20) NOT NULL DEFAULT &#39;0&#39; COMMENT &#39;唯一id&#39;,</span><br><span class="line">  &#96;component_id&#96; bigint(20) NOT NULL DEFAULT &#39;0&#39; COMMENT &#39;试卷id&#39;,</span><br><span class="line">  &#96;status&#96; int(11) NOT NULL DEFAULT &#39;0&#39; COMMENT &#39;状态：0：未提交，1：已提交&#39;,</span><br><span class="line">  &#96;score&#96; int(11) NOT NULL DEFAULT &#39;0&#39; COMMENT &#39;学生得分&#39;,</span><br><span class="line">  PRIMARY KEY (&#96;record_id&#96;) USING BTREE,</span><br><span class="line">  UNIQUE INDEX &#96;unique_id&#96;(&#96;unique_id&#96;) USING BTREE</span><br><span class="line">) ENGINE&#x3D;InnoDB AUTO_INCREMENT&#x3D;49 DEFAULT CHARSET&#x3D;utf8 COMMENT&#x3D;&#39;学生做组件记录&#39;;</span><br></pre></td></tr></table></figure>
+
+
+
+<figure class="highlight plain"><table><tr><td class="gutter"><pre><span class="line">1</span><br><span class="line">2</span><br><span class="line">3</span><br><span class="line">4</span><br><span class="line">5</span><br><span class="line">6</span><br><span class="line">7</span><br><span class="line">8</span><br><span class="line">9</span><br></pre></td><td class="code"><pre><span class="line">CREATE TABLE &#96;student_record_item&#96; (</span><br><span class="line">  &#96;student_record_item_id&#96; bigint(20) NOT NULL AUTO_INCREMENT COMMENT &#39;主键&#39;,</span><br><span class="line">  &#96;question_id&#96; bigint(20) NOT NULL DEFAULT &#39;0&#39; COMMENT &#39;题目id&#39;,</span><br><span class="line">  &#96;record_id&#96; bigint(20) NOT NULL DEFAULT &#39;0&#39; COMMENT &#39;考试记录id&#39;,</span><br><span class="line">  &#96;student_score&#96; int(11) NOT NULL DEFAULT &#39;0&#39; COMMENT &#39;学生得分&#39;,</span><br><span class="line">  &#96;score&#96; int(11) NOT NULL DEFAULT &#39;0&#39; COMMENT &#39;题目分数&#39;,</span><br><span class="line">  PRIMARY KEY (&#96;student_record_item_id&#96;) USING BTREE,</span><br><span class="line">  KEY &#96;record_id&#96; (&#96;record_id&#96;) USING BTREE</span><br><span class="line">) ENGINE&#x3D;InnoDB AUTO_INCREMENT&#x3D;65 DEFAULT CHARSET&#x3D;utf8 COMMENT&#x3D;&#39;学生做题记录&#39;;</span><br></pre></td></tr></table></figure>
+
+
+
+<h2 id="id和table"><a href="#id和table" class="headerlink" title="id和table"></a>id和table</h2><blockquote>
+<ul>
+<li><p>MySQL执行计划中，会为每个select关键字都会生成一个id</p>
+</li>
+<li><p>无论多么复杂的查询，最终都是分解成对单表的查询，然后再进行关联和计算</p>
+</li>
+</ul>
+</blockquote>
+<h3 id="简单查询"><a href="#简单查询" class="headerlink" title="简单查询"></a>简单查询</h3><p><img src="https://gitee.com/JiShuXiaoDang/Image/raw/master/mysql/id%E5%92%8Ctable%E7%AE%80%E5%8D%95%E6%9F%A5%E8%AF%A2.png" alt="id和table简单查询"></p>
+<blockquote>
+<p>我们写的简单查询语句都是以一个SELECT关键字开头，MySQL系统会为每个SELECT分配一个id，因此，对于简单查询student_record表，会生成一个id和查询的表名组合而成的查询计划</p>
+</blockquote>
+<h3 id="关联查询"><a href="#关联查询" class="headerlink" title="关联查询"></a>关联查询</h3><p><img src="https://gitee.com/JiShuXiaoDang/Image/raw/master/mysql/id%E5%92%8Ctable%E5%85%B3%E8%81%94%E6%9F%A5%E8%AF%A2.png" alt="id和table关联查询"></p>
+<blockquote>
+<p>不论我们的查询语句多复杂，里边涉及了多少个表，到最后也是对每个表进行单表访问</p>
+<p>对于上面的关联查询，其中涉及到两张表，table字段中分别以“别名”方式展示，但分配的id是相同的</p>
+</blockquote>
+<h3 id="子查询"><a href="#子查询" class="headerlink" title="子查询"></a>子查询</h3><p><img src="https://gitee.com/JiShuXiaoDang/Image/raw/master/mysql/id%E5%92%8Ctable%E5%AD%90%E6%9F%A5%E8%AF%A2.png" alt="id和table子查询"></p>
+<blockquote>
+<p>我们可以发现，在子查询的执行计划中，分配了两个id，需要注意的是，简单的子查询可能会被查询优化器进行重写。所以我们如果想知道查询优化器是否对子查询进行了重写，查看执行计划即可，比如：</p>
+</blockquote>
+<p><img src="https://gitee.com/JiShuXiaoDang/Image/raw/master/mysql/id%E5%92%8Ctable%E7%AE%80%E5%8D%95%E5%AD%90%E6%9F%A5%E8%AF%A2.png" alt="id和table简单子查询"></p>
+<blockquote>
+<p>上面查询语句是一个子查询，但是两张表对应的id都是1，表明了查询优化器将该子查询转换为了连接查询。我们可以使用 show warnings命令查看优化后的语句</p>
+<p>![show warnings](<a target="_blank" rel="noopener" href="https://gitee.com/JiShuXiaoDang/Image/raw/master/mysql/show">https://gitee.com/JiShuXiaoDang/Image/raw/master/mysql/show</a> warnings.png)</p>
+<p>太乱了 美化一下</p>
+<figure class="highlight plain"><table><tr><td class="gutter"><pre><span class="line">1</span><br><span class="line">2</span><br><span class="line">3</span><br><span class="line">4</span><br><span class="line">5</span><br><span class="line">6</span><br><span class="line">7</span><br><span class="line">8</span><br><span class="line">9</span><br><span class="line">10</span><br><span class="line">11</span><br><span class="line">12</span><br><span class="line">13</span><br><span class="line">14</span><br><span class="line">15</span><br><span class="line">16</span><br><span class="line">17</span><br><span class="line">18</span><br><span class="line">19</span><br></pre></td><td class="code"><pre><span class="line">SELECT</span><br><span class="line">	&#96;test&#96;.&#96;student_record_item&#96;.&#96;student_record_item_id&#96; AS &#96;student_record_item_id&#96;,</span><br><span class="line">	&#96;test&#96;.&#96;student_record_item&#96;.&#96;question_version_id&#96; AS &#96;question_version_id&#96;,</span><br><span class="line">	&#96;test&#96;.&#96;student_record_item&#96;.&#96;question_id&#96; AS &#96;question_id&#96;,</span><br><span class="line">	&#96;test&#96;.&#96;student_record_item&#96;.&#96;question_type&#96; AS &#96;question_type&#96;,</span><br><span class="line">	&#96;test&#96;.&#96;student_record_item&#96;.&#96;question_order&#96; AS &#96;question_order&#96;,</span><br><span class="line">	&#96;test&#96;.&#96;student_record_item&#96;.&#96;student_answer&#96; AS &#96;student_answer&#96;,</span><br><span class="line">	&#96;test&#96;.&#96;student_record_item&#96;.&#96;record_id&#96; AS &#96;record_id&#96;,</span><br><span class="line">	&#96;test&#96;.&#96;student_record_item&#96;.&#96;answer_type&#96; AS &#96;answer_type&#96;,</span><br><span class="line">	&#96;test&#96;.&#96;student_record_item&#96;.&#96;student_score&#96; AS &#96;student_score&#96;,</span><br><span class="line">	&#96;test&#96;.&#96;student_record_item&#96;.&#96;score&#96; AS &#96;score&#96;,</span><br><span class="line">	&#96;test&#96;.&#96;student_record_item&#96;.&#96;submit_time&#96; AS &#96;submit_time&#96;,</span><br><span class="line">	&#96;test&#96;.&#96;student_record_item&#96;.&#96;create_time&#96; AS &#96;create_time&#96;,</span><br><span class="line">	&#96;test&#96;.&#96;student_record_item&#96;.&#96;update_time&#96; AS &#96;update_time&#96; </span><br><span class="line">FROM</span><br><span class="line">	&#96;test&#96;.&#96;student_record&#96;</span><br><span class="line">	JOIN &#96;test&#96;.&#96;student_record_item&#96; </span><br><span class="line">WHERE</span><br><span class="line">	( ( &#96;test&#96;.&#96;student_record_item&#96;.&#96;record_id&#96; &#x3D; &#96;test&#96;.&#96;student_record&#96;.&#96;record_id&#96; ) AND ( &#96;test&#96;.&#96;student_record&#96;.&#96;record_id&#96; &gt; 30 ) )</span><br></pre></td></tr></table></figure>
+
+<p>可以看到 子查询被优化成了连接查询</p>
+</blockquote>
+<h3 id="UNION查询"><a href="#UNION查询" class="headerlink" title="UNION查询"></a>UNION查询</h3><p><img src="https://gitee.com/JiShuXiaoDang/Image/raw/master/mysql/union%E6%9F%A5%E8%AF%A2.png" alt="union查询"></p>
+<blockquote>
+<p>在union查询中，包含了两个select，因此也生成了两个id，但是第三条记录是什么呢？</p>
+<p>因为union会把多个查询的结果合并起来并对集合中的记录进行去重，因此会生成内部临时表。</p>
+<p>除了union外，还有个union all ，union all就不需要去重，因此也不需要创建临时表，如下所示</p>
+<p>![union all查询](<a target="_blank" rel="noopener" href="https://gitee.com/JiShuXiaoDang/Image/raw/master/mysql/union">https://gitee.com/JiShuXiaoDang/Image/raw/master/mysql/union</a> all查询.png)</p>
+</blockquote>
+<hr>
+<h2 id="select-type"><a href="#select-type" class="headerlink" title="select_type"></a>select_type</h2><blockquote>
+<p><code>select_type</code>属性表示查询类型，前面说到，复杂查询都会拆解成一个个单表查询，我们可以根据单表查询的类型了解到这个单表查询在该复杂查询中扮演的角色</p>
+</blockquote>
+<h3 id="SIMPLE"><a href="#SIMPLE" class="headerlink" title="SIMPLE"></a>SIMPLE</h3><p>查询中不包含UNION或者子查询的查询都算作SIMPLE类型的查询，连接查询也算是SIMPLE查询</p>
+<h3 id="PRIMARY"><a href="#PRIMARY" class="headerlink" title="PRIMARY"></a>PRIMARY</h3><p>对于包含<code>UNION</code>，<code>UNION ALL</code>或者子查询，他们都是又几个小查询组成，其中最左边的查询类型就是PRIMARY（图片可查看前面讲的id和table中的UNION查询）</p>
+<h3 id="UNION"><a href="#UNION" class="headerlink" title="UNION"></a>UNION</h3><p>对于包含<code>UNION</code>或者<code>UNION ALL</code>的大查询来说，它是由几个小查询组成的，其中除了最左边的那个小查询以外，其余的小查询的<code>select_type</code>值就是<code>UNION</code>，可以对比上一个例子的效果，这就不多举例子了。</p>
+<h3 id="UNION-RESULT"><a href="#UNION-RESULT" class="headerlink" title="UNION RESULT"></a>UNION RESULT</h3><p>MySQL选择使用临时表来完成UNION查询的去重工作，针对该临时表的查询的<code>select_type</code>就是UNION RESULT</p>
+<h3 id="SUBQUERY"><a href="#SUBQUERY" class="headerlink" title="SUBQUERY"></a>SUBQUERY</h3><p>对于一个子查询（未被优化成关联查询的），查询分为两段，第一个select关键字在外面，是PRIMARY类型的，括号中的查询就是SUBQUERY类型。</p>
+<h3 id="DEPENDENT-SUBQUERY"><a href="#DEPENDENT-SUBQUERY" class="headerlink" title="DEPENDENT SUBQUERY"></a>DEPENDENT SUBQUERY</h3><p>同样，一个子查询中，如果括号中的小查询的条件与外面的查询有条件关联（称为 <code>相关子查询</code>），则括号中的小查询类型为DEPENDENT SUBQUERY，如图所示</p>
+<p><img src="https://gitee.com/JiShuXiaoDang/Image/raw/master/mysql/%E7%9B%B8%E5%85%B3%E5%AD%90%E6%9F%A5%E8%AF%A2.png" alt="相关子查询"></p>
+<h3 id="DEPENDENT-UNION"><a href="#DEPENDENT-UNION" class="headerlink" title="DEPENDENT UNION"></a>DEPENDENT UNION</h3><p>在包含<code>UNION</code>或者<code>UNION ALL</code>的大查询中，如果各个小查询都依赖于外层查询的话，那除了最左边的那个小查询之外，其余的小查询的<code>select_type</code>的值就是<code>DEPENDENT UNION</code></p>
+<p><img src="https://gitee.com/JiShuXiaoDang/Image/raw/master/mysql/%E7%9B%B8%E5%85%B3union%E6%9F%A5%E8%AF%A2.png" alt="相关union查询"></p>
+<h3 id="DERIVED"><a href="#DERIVED" class="headerlink" title="DERIVED"></a>DERIVED</h3><p>当一个查询中存在派生表的时候，该派生表的子查询的查询类型就是<code>DERIVED</code></p>
+<p><img src="https://gitee.com/JiShuXiaoDang/Image/raw/master/mysql/%E6%B4%BE%E7%94%9F%E8%A1%A8%E6%9F%A5%E8%AF%A2.png" alt="派生表查询"></p>
+<hr>
+<h2 id="type"><a href="#type" class="headerlink" title="type"></a>type</h2><blockquote>
+<p>type字段表示如何查询的方法，比如，使用索引还是全表扫描，或者是取了索引的范围区间？</p>
+</blockquote>
+<h3 id="system"><a href="#system" class="headerlink" title="system"></a>system</h3><p>略~</p>
+<h3 id="const"><a href="#const" class="headerlink" title="const"></a>const</h3><p>当我们根据主键或者唯一所以列与常数进行等值匹配时，单表的访问方法就是const</p>
+<p><img src="https://gitee.com/JiShuXiaoDang/Image/raw/master/mysql/%E8%AE%BF%E9%97%AE%E6%96%B9%E6%B3%95const.png" alt="访问方法const"></p>
+<h3 id="eq-ref"><a href="#eq-ref" class="headerlink" title="eq_ref"></a>eq_ref</h3><p>在连接查询中，如果<code>被驱动表</code>是通过主键或者唯一索引与驱动表的值进行等值比较的，则访问方法就是eq_ref</p>
+<blockquote>
+<p> 先了解在join连接时哪个表是驱动表，哪个表是被驱动表：<br>1.当使用left join时，左表是驱动表，右表是被驱动表<br>2.当使用right join时，右表时驱动表，左表是驱动表<br>3.当使用join时，mysql会选择数据量比较小的表作为驱动表，大表作为被驱动表</p>
+<p>当然，通过查询优化器优化后，1和2的结论并不保证正确</p>
+</blockquote>
+<p><img src="https://gitee.com/JiShuXiaoDang/Image/raw/master/mysql/%E8%AE%BF%E9%97%AE%E6%96%B9%E6%B3%95eq_ref.png" alt="访问方法eq_ref"></p>
+<h3 id="ref"><a href="#ref" class="headerlink" title="ref"></a>ref</h3><p>当通过普通的二级索引列与常量进行等值匹配时来查询某个表，那么对该表的访问方法就可能是<code>ref</code></p>
+<h3 id="fulltext"><a href="#fulltext" class="headerlink" title="fulltext"></a>fulltext</h3><p>通过全文索引查询的方法</p>
+<h3 id="ref-or-null"><a href="#ref-or-null" class="headerlink" title="ref_or_null"></a>ref_or_null</h3><p>当对普通索引进行等值匹配查询，该索引列的值也可以是<code>NULL</code>值时，那么对该表的访问方法就可能是<code>ref_or_null</code>，比如说</p>
+<p><img src="https://gitee.com/JiShuXiaoDang/Image/raw/master/mysql/%E8%AE%BF%E9%97%AE%E6%96%B9%E6%B3%95ref.png" alt="访问方法ref"></p>
+<h3 id="index-merge"><a href="#index-merge" class="headerlink" title="index_merge"></a>index_merge</h3><p>大多数情况下 某个表的查询只能使用到一个索引，但是单表查询中，有可能使用到两个索引（OR）</p>
+<p>下图中的查询使用了普通索引和唯一索引分别查询数据，之后进行了union操作</p>
+<p><img src="https://gitee.com/JiShuXiaoDang/Image/raw/master/mysql/%E8%AE%BF%E9%97%AE%E6%96%B9%E6%B3%95index_marge.png" alt="访问方法index_marge"></p>
+<h3 id="unique-subquery"><a href="#unique-subquery" class="headerlink" title="unique_subquery"></a>unique_subquery</h3><p>类似于两表连接中被驱动表的<code>eq_ref</code>访问方法，<code>unique_subquery</code>是针对在一些包含<code>IN</code>子查询的查询语句中，如果查询优化器决定将<code>IN</code>子查询转换为<code>EXISTS</code>子查询，而且子查询可以使用到主键进行等值匹配的话，那么该子查询执行计划的<code>type</code>列的值就是<code>unique_subquery</code></p>
+<h3 id="index-subquery"><a href="#index-subquery" class="headerlink" title="index_subquery"></a>index_subquery</h3><p><code>index_subquery</code>与<code>unique_subquery</code>类似，只不过访问子查询中的表时使用的是普通的索引</p>
+<h3 id="range"><a href="#range" class="headerlink" title="range"></a>range</h3><p>如果使用索引获取某些<code>范围区间</code>的记录，那么就可能使用到<code>range</code>访问方法</p>
+<p>比如 key  in (1,2,4) 或者  key&gt;1 and key&lt;100   (key是索引列的情况)</p>
+<h3 id="index"><a href="#index" class="headerlink" title="index"></a>index</h3><p>当我们可以使用索引覆盖，但需要扫描全部的索引记录时，该表的访问方法就是<code>index</code></p>
+<p>在一个联合索引中，index(key1,key2） 我们查询联合索引的其中一个列，用第二个列作为筛选条件时</p>
+<p>如</p>
+<figure class="highlight plain"><table><tr><td class="gutter"><pre><span class="line">1</span><br></pre></td><td class="code"><pre><span class="line">select key1 from table where key2 &#x3D; 3</span><br></pre></td></tr></table></figure>
+
+
+
+
+
+<h3 id="ALL"><a href="#ALL" class="headerlink" title="ALL"></a>ALL</h3><p>全表扫描</p>
+<hr>
+<h2 id="possible-keys和key"><a href="#possible-keys和key" class="headerlink" title="possible_keys和key"></a>possible_keys和key</h2><p>在<code>EXPLAIN</code>语句输出的执行计划中，<code>possible_keys</code>列表示在某个查询语句中，对某个表执行单表查询时可能用到的索引有哪些，<code>key</code>列表示实际用到的索引有哪些</p>
+<p>在一个查询执行前，查询优化器计算使用不同索引的成本后，会决定出一个真正使用的索引列，这就是possible_keys和key的不同</p>
+<p>比如<code>type</code>为index的查询：</p>
+<p>在一个联合索引中，index(key1,key2） 我们查询联合索引的其中一个列，用第二个列作为筛选条件时</p>
+<p>如</p>
+<figure class="highlight plain"><table><tr><td class="gutter"><pre><span class="line">1</span><br></pre></td><td class="code"><pre><span class="line">select key1 from table where key2 &#x3D; 3</span><br></pre></td></tr></table></figure>
+
+<p>possible_keys是空的，但实际其实是利用了联合索引</p>
+<h2 id="ref-1"><a href="#ref-1" class="headerlink" title="ref"></a>ref</h2><p>当使用索引列等值匹配的条件去执行查询时，也就是在访问方法是<code>const</code>、<code>eq_ref</code>、<code>ref</code>、<code>ref_or_null</code>、<code>unique_subquery</code>、<code>index_subquery</code>其中之一时，<code>ref</code>列展示的就是与索引列作等值匹配的是什么，比如只是一个常数或者是某个列</p>
+</article><div class="post-copyright"><div class="post-copyright__author"><span class="post-copyright-meta">文章作者: </span><span class="post-copyright-info"><a href="mailto:undefined">王英杰</a></span></div><div class="post-copyright__type"><span class="post-copyright-meta">文章链接: </span><span class="post-copyright-info"><a href="http://bugjie.com/2021/03/04/MySQL/MySQL-EXPLAIN%E8%AF%A6%E8%A7%A3/">http://bugjie.com/2021/03/04/MySQL/MySQL-EXPLAIN%E8%AF%A6%E8%A7%A3/</a></span></div><div class="post-copyright__notice"><span class="post-copyright-meta">版权声明: </span><span class="post-copyright-info">本博客所有文章除特别声明外，均采用 <a href="https://creativecommons.org/licenses/by-nc-sa/4.0/" target="_blank">CC BY-NC-SA 4.0</a> 许可协议。转载请注明来自 <a href="http://bugjie.com" target="_blank">技术小党</a>！</span></div></div><div class="tag_share"><div class="post-meta__tag-list"><a class="post-meta__tags" href="/tags/EXPLAIN/">EXPLAIN</a></div><div class="post_share"><div class="social-share" data-image="https://gitee.com/JiShuXiaoDang/Image/raw/master/hexo/blog/%E5%AF%92%E5%86%B0%E5%B0%84%E6%89%8B.jpg" data-sites="facebook,twitter,wechat,weibo,qq"></div><link rel="stylesheet" href="https://cdn.jsdelivr.net/npm/social-share.js/dist/css/share.min.css"><script src="https://cdn.jsdelivr.net/npm/social-share.js/dist/js/social-share.min.js" defer></script></div></div><nav class="pagination-post" id="pagination"><div class="next-post pull-full"><a href="/2021/02/03/redis/Redis%E5%A4%8D%E5%88%B6/"><img class="next-cover" src="https://gitee.com/JiShuXiaoDang/Image/raw/master/hexo/%E9%BA%A6%E8%8A%92.jpg" onerror="onerror=null;src='/img/404.jpg'"><div class="pagination-info"><div class="label">下一篇</div><div class="next_info">Redis复制</div></div></a></div></nav></div><div class="aside_content" id="aside_content"><div class="card-widget card-info"><div class="card-content"><div class="card-info-avatar is-center"><img class="avatar-img" src="https://gitee.com/JiShuXiaoDang/Image/raw/master/hexo/%E5%A4%B4%E5%83%8F-%E7%8C%AB.jpg" onerror="this.onerror=null;this.src='/img/friend_404.gif'" alt="avatar"/><div class="author-info__name">王英杰</div><div class="author-info__description"></div></div><div class="card-info-data"><div class="card-info-data-item is-center"><a href="/archives/"><div class="headline">文章</div><div class="length-num">23</div></a></div><div class="card-info-data-item is-center"><a href="/tags/"><div class="headline">标签</div><div class="length-num">32</div></a></div><div class="card-info-data-item is-center"><a href="/categories/"><div class="headline">分类</div><div class="length-num">6</div></a></div></div><a class="button--animated" id="card-info-btn" target="_blank" rel="noopener" href="https://github.com/jishuxiaodang"><i class="fab fa-github"></i><span>Follow Me</span></a></div></div><div class="sticky_layout"><div class="card-widget" id="card-toc"><div class="card-content"><div class="item-headline"><i class="fas fa-stream"></i><span>目录</span></div><div class="toc-content"><ol class="toc"><li class="toc-item toc-level-2"><a class="toc-link" href="#%E6%89%A7%E8%A1%8C%E8%AE%A1%E5%88%92%E5%88%97%E5%90%8D%E6%95%B4%E4%BD%93%E6%8F%8F%E8%BF%B0"><span class="toc-number">1.</span> <span class="toc-text">执行计划列名整体描述</span></a></li><li class="toc-item toc-level-2"><a class="toc-link" href="#id%E5%92%8Ctable"><span class="toc-number">2.</span> <span class="toc-text">id和table</span></a><ol class="toc-child"><li class="toc-item toc-level-3"><a class="toc-link" href="#%E7%AE%80%E5%8D%95%E6%9F%A5%E8%AF%A2"><span class="toc-number">2.1.</span> <span class="toc-text">简单查询</span></a></li><li class="toc-item toc-level-3"><a class="toc-link" href="#%E5%85%B3%E8%81%94%E6%9F%A5%E8%AF%A2"><span class="toc-number">2.2.</span> <span class="toc-text">关联查询</span></a></li><li class="toc-item toc-level-3"><a class="toc-link" href="#%E5%AD%90%E6%9F%A5%E8%AF%A2"><span class="toc-number">2.3.</span> <span class="toc-text">子查询</span></a></li><li class="toc-item toc-level-3"><a class="toc-link" href="#UNION%E6%9F%A5%E8%AF%A2"><span class="toc-number">2.4.</span> <span class="toc-text">UNION查询</span></a></li></ol></li><li class="toc-item toc-level-2"><a class="toc-link" href="#select-type"><span class="toc-number">3.</span> <span class="toc-text">select_type</span></a><ol class="toc-child"><li class="toc-item toc-level-3"><a class="toc-link" href="#SIMPLE"><span class="toc-number">3.1.</span> <span class="toc-text">SIMPLE</span></a></li><li class="toc-item toc-level-3"><a class="toc-link" href="#PRIMARY"><span class="toc-number">3.2.</span> <span class="toc-text">PRIMARY</span></a></li><li class="toc-item toc-level-3"><a class="toc-link" href="#UNION"><span class="toc-number">3.3.</span> <span class="toc-text">UNION</span></a></li><li class="toc-item toc-level-3"><a class="toc-link" href="#UNION-RESULT"><span class="toc-number">3.4.</span> <span class="toc-text">UNION RESULT</span></a></li><li class="toc-item toc-level-3"><a class="toc-link" href="#SUBQUERY"><span class="toc-number">3.5.</span> <span class="toc-text">SUBQUERY</span></a></li><li class="toc-item toc-level-3"><a class="toc-link" href="#DEPENDENT-SUBQUERY"><span class="toc-number">3.6.</span> <span class="toc-text">DEPENDENT SUBQUERY</span></a></li><li class="toc-item toc-level-3"><a class="toc-link" href="#DEPENDENT-UNION"><span class="toc-number">3.7.</span> <span class="toc-text">DEPENDENT UNION</span></a></li><li class="toc-item toc-level-3"><a class="toc-link" href="#DERIVED"><span class="toc-number">3.8.</span> <span class="toc-text">DERIVED</span></a></li></ol></li><li class="toc-item toc-level-2"><a class="toc-link" href="#type"><span class="toc-number">4.</span> <span class="toc-text">type</span></a><ol class="toc-child"><li class="toc-item toc-level-3"><a class="toc-link" href="#system"><span class="toc-number">4.1.</span> <span class="toc-text">system</span></a></li><li class="toc-item toc-level-3"><a class="toc-link" href="#const"><span class="toc-number">4.2.</span> <span class="toc-text">const</span></a></li><li class="toc-item toc-level-3"><a class="toc-link" href="#eq-ref"><span class="toc-number">4.3.</span> <span class="toc-text">eq_ref</span></a></li><li class="toc-item toc-level-3"><a class="toc-link" href="#ref"><span class="toc-number">4.4.</span> <span class="toc-text">ref</span></a></li><li class="toc-item toc-level-3"><a class="toc-link" href="#fulltext"><span class="toc-number">4.5.</span> <span class="toc-text">fulltext</span></a></li><li class="toc-item toc-level-3"><a class="toc-link" href="#ref-or-null"><span class="toc-number">4.6.</span> <span class="toc-text">ref_or_null</span></a></li><li class="toc-item toc-level-3"><a class="toc-link" href="#index-merge"><span class="toc-number">4.7.</span> <span class="toc-text">index_merge</span></a></li><li class="toc-item toc-level-3"><a class="toc-link" href="#unique-subquery"><span class="toc-number">4.8.</span> <span class="toc-text">unique_subquery</span></a></li><li class="toc-item toc-level-3"><a class="toc-link" href="#index-subquery"><span class="toc-number">4.9.</span> <span class="toc-text">index_subquery</span></a></li><li class="toc-item toc-level-3"><a class="toc-link" href="#range"><span class="toc-number">4.10.</span> <span class="toc-text">range</span></a></li><li class="toc-item toc-level-3"><a class="toc-link" href="#index"><span class="toc-number">4.11.</span> <span class="toc-text">index</span></a></li><li class="toc-item toc-level-3"><a class="toc-link" href="#ALL"><span class="toc-number">4.12.</span> <span class="toc-text">ALL</span></a></li></ol></li><li class="toc-item toc-level-2"><a class="toc-link" href="#possible-keys%E5%92%8Ckey"><span class="toc-number">5.</span> <span class="toc-text">possible_keys和key</span></a></li><li class="toc-item toc-level-2"><a class="toc-link" href="#ref-1"><span class="toc-number">6.</span> <span class="toc-text">ref</span></a></li></ol></div></div></div><div class="card-widget card-recent-post"><div class="card-content"><div class="item-headline"><i class="fas fa-history"></i><span>最新文章</span></div><div class="aside-list"><div class="aside-list-item"><a class="thumbnail" href="/2021/03/04/MySQL/MySQL-EXPLAIN%E8%AF%A6%E8%A7%A3/" title="MySQL-EXPLAIN详解"><img src="https://gitee.com/JiShuXiaoDang/Image/raw/master/hexo/blog/%E5%AF%92%E5%86%B0%E5%B0%84%E6%89%8B.jpg" onerror="this.onerror=null;this.src='/img/404.jpg'" alt="MySQL-EXPLAIN详解"/></a><div class="content"><a class="title" href="/2021/03/04/MySQL/MySQL-EXPLAIN%E8%AF%A6%E8%A7%A3/" title="MySQL-EXPLAIN详解">MySQL-EXPLAIN详解</a><time datetime="2021-03-04T14:30:09.000Z" title="发表于 2021-03-04 22:30:09">2021-03-04</time></div></div><div class="aside-list-item"><a class="thumbnail" href="/2021/02/03/redis/Redis%E5%A4%8D%E5%88%B6/" title="Redis复制"><img src="https://gitee.com/JiShuXiaoDang/Image/raw/master/hexo/%E9%BA%A6%E8%8A%92.jpg" onerror="this.onerror=null;this.src='/img/404.jpg'" alt="Redis复制"/></a><div class="content"><a class="title" href="/2021/02/03/redis/Redis%E5%A4%8D%E5%88%B6/" title="Redis复制">Redis复制</a><time datetime="2021-02-03T14:34:43.000Z" title="发表于 2021-02-03 22:34:43">2021-02-03</time></div></div><div class="aside-list-item"><a class="thumbnail" href="/2021/01/09/%E8%AE%BE%E8%AE%A1%E6%A8%A1%E5%BC%8F/5.%E5%8D%95%E4%BE%8B%E6%A8%A1%E5%BC%8F/" title="单例模式"><img src="https://gitee.com/JiShuXiaoDang/Image/raw/master/hexo/blog/%E6%99%9A%E4%B8%8A%E6%B5%B7%E8%BE%B9.jpeg" onerror="this.onerror=null;this.src='/img/404.jpg'" alt="单例模式"/></a><div class="content"><a class="title" href="/2021/01/09/%E8%AE%BE%E8%AE%A1%E6%A8%A1%E5%BC%8F/5.%E5%8D%95%E4%BE%8B%E6%A8%A1%E5%BC%8F/" title="单例模式">单例模式</a><time datetime="2021-01-09T12:06:31.000Z" title="发表于 2021-01-09 20:06:31">2021-01-09</time></div></div><div class="aside-list-item"><a class="thumbnail" href="/2020/12/06/java%E5%B9%B6%E5%8F%91%E7%BC%96%E7%A8%8B/ThreadLocal%E5%8E%9F%E7%90%86/" title="ThreadLocal原理"><img src="https://gitee.com/JiShuXiaoDang/Image/raw/master/hexo/blog/001.jpg" onerror="this.onerror=null;this.src='/img/404.jpg'" alt="ThreadLocal原理"/></a><div class="content"><a class="title" href="/2020/12/06/java%E5%B9%B6%E5%8F%91%E7%BC%96%E7%A8%8B/ThreadLocal%E5%8E%9F%E7%90%86/" title="ThreadLocal原理">ThreadLocal原理</a><time datetime="2020-12-06T15:34:14.000Z" title="发表于 2020-12-06 23:34:14">2020-12-06</time></div></div><div class="aside-list-item"><a class="thumbnail" href="/2020/12/06/java%E5%B9%B6%E5%8F%91%E7%BC%96%E7%A8%8B/java%E7%BA%BF%E7%A8%8B%E6%B1%A0/" title="Java线程池"><img src="https://gitee.com/JiShuXiaoDang/Image/raw/master/hexo/blog/%E7%BB%BF%E6%B5%B7.jpeg" onerror="this.onerror=null;this.src='/img/404.jpg'" alt="Java线程池"/></a><div class="content"><a class="title" href="/2020/12/06/java%E5%B9%B6%E5%8F%91%E7%BC%96%E7%A8%8B/java%E7%BA%BF%E7%A8%8B%E6%B1%A0/" title="Java线程池">Java线程池</a><time datetime="2020-12-06T12:34:43.000Z" title="发表于 2020-12-06 20:34:43">2020-12-06</time></div></div></div></div></div></div></div></main><footer id="footer" style="background-image: url(https://gitee.com/JiShuXiaoDang/Image/raw/master/hexo/blog/%E5%AF%92%E5%86%B0%E5%B0%84%E6%89%8B.jpg)"><div id="footer-wrap"><div class="footer_custom_text">Copyright © 王英杰 2020</div><div class="icp"><a target="_blank" rel="noopener" href="https://beian.miit.gov.cn/"><img class="icp-icon" src="/img/icp.png" alt="ICP"/><span>冀ICP备18029820号-1</span></a></div></div></footer></div><div id="rightside"><div id="rightside-config-hide"><button id="readmode" type="button" title="阅读模式"><i class="fas fa-book-open"></i></button><button id="darkmode" type="button" title="浅色和深色模式转换"><i class="fas fa-adjust"></i></button><button id="hide-aside-btn" type="button"><i class="fas fa-arrows-alt-h"></i></button></div><div id="rightside-config-show"><button id="rightside_config" type="button" title="设置"><i class="fas fa-cog"></i></button><button class="close" id="mobile-toc-button" type="button" title="目录"><i class="fas fa-list-ul"></i></button><button id="go-up" type="button" title="回到顶部"><i class="fas fa-arrow-up"></i></button></div></div><div><script src="https://cdn.jsdelivr.net/npm/jquery@latest/dist/jquery.min.js"></script><script src="/js/utils.js"></script><script src="/js/main.js"></script><script src="https://cdn.jsdelivr.net/npm/@fancyapps/fancybox@latest/dist/jquery.fancybox.min.js"></script><div class="js-pjax"></div></div></body></html>
